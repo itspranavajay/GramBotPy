@@ -4,6 +4,7 @@ import platform
 import typing
 import signal
 import sys
+import aiohttp
 from datetime import datetime
 
 from .dispatcher import Dispatcher
@@ -164,8 +165,34 @@ class GramBotPy(Methods):
         Returns:
             :obj:`User`: The bot user.
         """
-        # Here would be the actual sign in logic
-        # Simplified for example
+        # Use get_me API method to retrieve actual bot information from Telegram
+        try:
+            # Make API request to get bot information
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f'https://api.telegram.org/bot{bot_token}/getMe') as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        if result.get('ok'):
+                            bot_data = result.get('result', {})
+                            return User(
+                                id=bot_data.get('id'),
+                                is_bot=bot_data.get('is_bot', True),
+                                first_name=bot_data.get('first_name', 'Bot'),
+                                last_name=bot_data.get('last_name'),
+                                username=bot_data.get('username'),
+                                language_code=bot_data.get('language_code'),
+                                can_join_groups=bot_data.get('can_join_groups'),
+                                can_read_all_group_messages=bot_data.get('can_read_all_group_messages'),
+                                supports_inline_queries=bot_data.get('supports_inline_queries')
+                            )
+                        else:
+                            self.logger.error(f"Failed to get bot info: {result.get('description')}")
+                    else:
+                        self.logger.error(f"Failed to get bot info: HTTP {response.status}")
+        except Exception as e:
+            self.logger.error(f"Error getting bot information: {e}")
+            
+        # Fallback to basic info if API call fails
         return User(
             id=int(bot_token.split(":")[0]),
             is_bot=True,
@@ -211,10 +238,12 @@ class GramBotPy(Methods):
             # Windows doesn't support add_signal_handler
             pass
         
-        try:
-            print("Starting bot...")
+        try:            print("Starting bot...")
             loop.run_until_complete(self.start())
-            print(f"Bot started as @{self._me.username}")
+            if self._me.username:
+                print(f"Bot started as @{self._me.username}")
+            else:
+                print("Bot started successfully")
             # Keep the event loop running until stop() is called
             loop.run_forever()
         except KeyboardInterrupt:
@@ -243,4 +272,4 @@ class GramBotPy(Methods):
     
     async def __aexit__(self, *args) -> None:
         """Exit the context manager."""
-        await self.stop() 
+        await self.stop()
