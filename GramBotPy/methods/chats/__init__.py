@@ -12,6 +12,19 @@ from .mute_chat_member import MuteChatMember
 from .unmute_chat_member import UnmuteChatMember
 from .get_user_info import GetUserInfo
 from .get_chat_information import GetChatInformation
+from .create_chat_invite_link import CreateChatInviteLink
+from .get_channel_messages import GetChannelMessages
+from .helpers import (
+    get_chat,
+    get_chat_member,
+    get_chat_members,
+    get_chat_member_count,
+    get_chat_administrators,
+    get_me,
+    set_chat_title,
+    set_chat_description,
+    set_chat_photo
+)
 
 class ChatsMethodsMixin(
     GetChat,
@@ -27,11 +40,22 @@ class ChatsMethodsMixin(
     MuteChatMember,
     UnmuteChatMember,
     GetUserInfo,
-    GetChatInformation
+    GetChatInformation,
+    CreateChatInviteLink,
+    GetChannelMessages
 ):
     """Chat management methods.
     
     This mixin includes all methods related to managing chats and their members,
     such as getting chat information, banning members, etc.
     """
-    pass 
+    # Helper methods
+    get_chat = get_chat
+    get_chat_member = get_chat_member
+    get_chat_members = get_chat_members
+    get_chat_member_count = get_chat_member_count
+    get_chat_administrators = get_chat_administrators
+    get_me = get_me
+    set_chat_title = set_chat_title
+    set_chat_description = set_chat_description
+    set_chat_photo = set_chat_photo 

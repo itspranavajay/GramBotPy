@@ -3,6 +3,9 @@ from .chats import ChatsMethodsMixin
 from .messages import MessagesMethodsMixin
 from .media import MediaMethodsMixin
 from .games import GamesMethodsMixin
+from .business import BusinessMethodsMixin
+from .gifts import GiftsMethodsMixin
+from .database import DatabaseMethodsMixin
 from .utility_error_handler import UtilityErrorHandler
 
 class Methods(
@@ -11,6 +14,9 @@ class Methods(
     MessagesMethodsMixin,
     MediaMethodsMixin,
     GamesMethodsMixin,
+    BusinessMethodsMixin,
+    GiftsMethodsMixin,
+    DatabaseMethodsMixin,
     UtilityErrorHandler
 ):
     """Methods class combining all available methods for the GramBotPy client.

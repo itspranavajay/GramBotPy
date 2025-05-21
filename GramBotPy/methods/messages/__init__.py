@@ -14,6 +14,7 @@ from .send_animation import SendAnimation
 from .send_poll import SendPoll
 from .send_dice import SendDice
 from .message_scheduler import MessageScheduler
+from .set_message_reaction import SetMessageReaction
 
 class MessagesMethodsMixin(
     SendMessage,
@@ -31,7 +32,8 @@ class MessagesMethodsMixin(
     SendAnimation,
     SendPoll,
     SendDice,
-    MessageScheduler
+    MessageScheduler,
+    SetMessageReaction
 ):
     """Message handling methods.
     
