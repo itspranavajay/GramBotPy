@@ -240,7 +240,7 @@ class GramBotPy(Methods):
         
         try:            print("Starting bot...")
             loop.run_until_complete(self.start())
-            if self._me.username:
+            if self._me and self._me.username:
                 print(f"Bot started as @{self._me.username}")
             else:
                 print("Bot started successfully")
