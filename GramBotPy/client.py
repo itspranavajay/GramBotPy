@@ -5,6 +5,8 @@ import typing
 import signal
 import sys
 from datetime import datetime
+import aiohttp
+import json
 
 from .dispatcher import Dispatcher
 from .methods import Methods
@@ -173,6 +175,27 @@ class GramBotPy(Methods):
             username="bot"
         )
     
+    def command(self, command_name):
+        """Decorator for handling bot commands.
+        
+        Parameters:
+            command_name (``str``):
+                The command name without the leading slash (e.g. "start" for /start).
+                
+        Returns:
+            Callable: The decorator.
+        """
+        def command_filter(message):
+            if not message.text:
+                return False
+            parts = message.text.split()
+            if not parts:
+                return False
+            # Check if the first part of the message is the command
+            return parts[0] == f"/{command_name}" or parts[0] == f"/{command_name}@{self._me.username}"
+        
+        return self.on_message(command_filter)
+    
     def on_message(self, filters=None):
         """Decorator for handling messages.
         
@@ -194,6 +217,131 @@ class GramBotPy(Methods):
             Callable: The decorator.
         """
         return self._dispatcher.on_callback_query(filters)
+    
+    def callback_query(self, data):
+        """Decorator for handling callback queries with specific data.
+        
+        Parameters:
+            data (``str``):
+                The callback data to filter for.
+                
+        Returns:
+            Callable: The decorator.
+        """
+        def callback_filter(callback_query):
+            return callback_query.data == data
+        
+        return self.on_callback_query(callback_filter)
+    
+    def message_handler(self, message_type):
+        """Decorator for handling specific message types.
+        
+        Parameters:
+            message_type (``str``):
+                The type of message to handle.
+                
+        Returns:
+            Callable: The decorator.
+        """
+        def message_filter(message):
+            if message_type == "text" and message.text:
+                return True
+            elif message_type == "photo" and message.photo:
+                return True
+            elif message_type == "video" and message.video:
+                return True
+            elif message_type == "audio" and message.audio:
+                return True
+            elif message_type == "sticker" and message.sticker:
+                return True
+            elif message_type == "document" and message.document:
+                return True
+            elif message_type == "contact" and message.contact:
+                return True
+            elif message_type == "location" and message.location:
+                return True
+            elif message_type == "new_chat_members" and message.new_chat_members:
+                return True
+            return False
+        
+        return self.on_message(message_filter)
+    
+    def chat_join_request_handler(self):
+        """Decorator for handling chat join requests.
+        
+        Returns:
+            Callable: The decorator.
+        """
+        def decorator(func):
+            # This would be implemented in a real scenario
+            return func
+        return decorator
+    
+    def inline_query_handler(self):
+        """Decorator for handling inline queries.
+        
+        Returns:
+            Callable: The decorator.
+        """
+        def decorator(func):
+            # Register handler with the dispatcher
+            self._dispatcher.inline_query_handlers.append((func, None))
+            return func
+        return decorator
+    
+    def chosen_inline_result_handler(self):
+        """Decorator for handling chosen inline results.
+        
+        Returns:
+            Callable: The decorator.
+        """
+        def decorator(func):
+            # Register handler with the dispatcher
+            self._dispatcher.chosen_inline_result_handlers.append((func, None))
+            return func
+        return decorator
+    
+    def game_query_handler(self):
+        """Decorator for handling game queries.
+        
+        Returns:
+            Callable: The decorator.
+        """
+        def decorator(func):
+            # Register handler with the dispatcher
+            self._dispatcher.game_query_handlers.append((func, None))
+            return func
+        return decorator
+    
+    def callback_query_handler(self):
+        """Decorator for handling all callback queries.
+        
+        Returns:
+            Callable: The decorator.
+        """
+        return self.on_callback_query()
+    
+    def error_handler(self):
+        """Decorator for handling errors.
+        
+        Returns:
+            Callable: The decorator.
+        """
+        def decorator(func):
+            # This would be implemented in a real scenario
+            return func
+        return decorator
+    
+    async def idle(self):
+        """Idle the bot.
+        
+        This method keeps the bot running until stop() is called.
+        """
+        try:
+            while self._is_connected:
+                await asyncio.sleep(1)
+        except (KeyboardInterrupt, SystemExit):
+            await self.stop()
     
     def run(self):
         """Run the bot synchronously.
@@ -243,4 +391,39 @@ class GramBotPy(Methods):
     
     async def __aexit__(self, *args) -> None:
         """Exit the context manager."""
-        await self.stop() 
+        await self.stop()
+    
+    async def send_request(self, method_name: str, params: dict = None) -> typing.Any:
+        """Send a request to the Telegram Bot API.
+        
+        Parameters:
+            method_name (``str``):
+                The name of the method to call.
+                
+            params (``dict``, optional):
+                The parameters to send with the request.
+                
+        Returns:
+            ``typing.Any``: The response from the API.
+        """
+        base_url = f"https://api.telegram.org/bot{self.token}"
+        url = f"{base_url}/{method_name}"
+        
+        if params is None:
+            params = {}
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, json=params) as response:
+                    result = await response.json()
+                    
+                    if result.get("ok"):
+                        return result.get("result")
+                    else:
+                        error_message = result.get("description", "Unknown error")
+                        error_code = result.get("error_code", 0)
+                        self.logger.error(f"API Error {error_code}: {error_message}")
+                        return False
+            except Exception as e:
+                self.logger.error(f"Request error: {e}")
+                return False 

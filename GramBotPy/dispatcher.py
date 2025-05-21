@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 if typing.TYPE_CHECKING:
     from .client import GramBotPy
-    from .types import Update, Message, CallbackQuery
+    from .types import Update, Message, CallbackQuery, InlineQuery, ChosenInlineResult
 
 class Dispatcher:
     """Dispatcher for handling updates.
@@ -29,6 +29,9 @@ class Dispatcher:
         
         self.message_handlers = []
         self.callback_query_handlers = []
+        self.inline_query_handlers = []
+        self.chosen_inline_result_handlers = []
+        self.game_query_handlers = []
         
         self._loop = None
         self._executor = None
@@ -97,6 +100,12 @@ class Dispatcher:
                 await self.process_message(update.message)
             elif update.callback_query:
                 await self.process_callback_query(update.callback_query)
+            elif update.inline_query:
+                await self.process_inline_query(update.inline_query)
+            elif update.chosen_inline_result:
+                await self.process_chosen_inline_result(update.chosen_inline_result)
+            elif hasattr(update, 'game_query'):
+                await self.process_game_query(update.game_query)
         except Exception as e:
             self.logger.error(f"Error while processing update: {e}")
             
@@ -111,12 +120,11 @@ class Dispatcher:
             if await self._check_filters(filters, message):
                 try:
                     if inspect.iscoroutinefunction(handler):
-                        await handler(self.client, message)
+                        await handler(message)
                     else:
                         await self._loop.run_in_executor(
                             self._executor,
                             handler,
-                            self.client,
                             message
                         )
                 except Exception as e:
@@ -133,16 +141,77 @@ class Dispatcher:
             if await self._check_filters(filters, callback_query):
                 try:
                     if inspect.iscoroutinefunction(handler):
-                        await handler(self.client, callback_query)
+                        await handler(callback_query)
                     else:
                         await self._loop.run_in_executor(
                             self._executor,
                             handler,
-                            self.client,
                             callback_query
                         )
                 except Exception as e:
                     self.logger.error(f"Error in callback query handler: {e}")
+                    
+    async def process_inline_query(self, inline_query: "InlineQuery"):
+        """Process an inline query.
+        
+        Parameters:
+            inline_query (:obj:`InlineQuery`):
+                The inline query to process.
+        """
+        for handler, filters in self.inline_query_handlers:
+            if await self._check_filters(filters, inline_query):
+                try:
+                    if inspect.iscoroutinefunction(handler):
+                        await handler(inline_query)
+                    else:
+                        await self._loop.run_in_executor(
+                            self._executor,
+                            handler,
+                            inline_query
+                        )
+                except Exception as e:
+                    self.logger.error(f"Error in inline query handler: {e}")
+                    
+    async def process_chosen_inline_result(self, chosen_inline_result: "ChosenInlineResult"):
+        """Process a chosen inline result.
+        
+        Parameters:
+            chosen_inline_result (:obj:`ChosenInlineResult`):
+                The chosen inline result to process.
+        """
+        for handler, filters in self.chosen_inline_result_handlers:
+            if await self._check_filters(filters, chosen_inline_result):
+                try:
+                    if inspect.iscoroutinefunction(handler):
+                        await handler(chosen_inline_result)
+                    else:
+                        await self._loop.run_in_executor(
+                            self._executor,
+                            handler,
+                            chosen_inline_result
+                        )
+                except Exception as e:
+                    self.logger.error(f"Error in chosen inline result handler: {e}")
+                    
+    async def process_game_query(self, game_query):
+        """Process a game query.
+        
+        Parameters:
+            game_query: The game query to process.
+        """
+        for handler, filters in self.game_query_handlers:
+            if await self._check_filters(filters, game_query):
+                try:
+                    if inspect.iscoroutinefunction(handler):
+                        await handler(game_query)
+                    else:
+                        await self._loop.run_in_executor(
+                            self._executor,
+                            handler,
+                            game_query
+                        )
+                except Exception as e:
+                    self.logger.error(f"Error in game query handler: {e}")
                     
     async def _check_filters(self, filters, update):
         """Check if an update passes the filters.
