@@ -235,10 +235,10 @@ class GramBotPy(Methods):
             for sig in (signal.SIGINT, signal.SIGTERM):
                 loop.add_signal_handler(sig, lambda: asyncio.create_task(self.stop()))
         except NotImplementedError:
-            # Windows doesn't support add_signal_handler
             pass
         
-        try:            print("Starting bot...")
+        try:
+            print("Starting bot...")
             loop.run_until_complete(self.start())
             if self._me and self._me.username:
                 print(f"Bot started as @{self._me.username}")
